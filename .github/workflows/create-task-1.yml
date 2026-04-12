@@ -1,0 +1,66 @@
+name: Create Task 1 Issue
+
+on:
+  fork:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: 'GitHub username to personalize the issue'
+        required: true
+        default: 'your_github_username'
+
+permissions:
+  issues: write
+
+jobs:
+  create_issue:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up GitHub user
+        id: get_user
+        run: |
+          echo "USERNAME=$(jq -r .sender.login $GITHUB_EVENT_PATH)" >> $GITHUB_ENV
+
+      - name: Create a personalized issue file
+        id: create_file
+        run: |
+          USERNAME=${{ env.USERNAME }}
+          TEMPLATE_PATH="../git-chaos/.github/workflows/template_task_1.md"
+          ISSUE_FILE="../git-chaos/.github/workflows/issue_temp.md"
+
+          echo "Username is: $USERNAME"
+
+          # Check if USERNAME is defined
+          if [ -z "$USERNAME" ]; then
+            echo "USERNAME is not defined."
+            exit 1
+          fi
+
+          # Remove temp file if it already exists
+          if [ -f "$ISSUE_FILE" ]; then
+            echo "Removing existing file: $ISSUE_FILE"
+            rm $ISSUE_FILE
+          fi
+
+          # Replace placeholder with actual username
+          sed "s/your_github_username/${USERNAME}/g" $TEMPLATE_PATH > $ISSUE_FILE
+
+          # Check if the file was created
+          if [ -f "$ISSUE_FILE" ]; then
+            echo "$ISSUE_FILE created successfully."
+          else
+            echo "$ISSUE_FILE was not created."
+            exit 1
+          fi
+
+      - name: Create welcome issue
+        uses: peter-evans/create-issue-from-file@v6
+        with:
+          title: "Task 1: Create file: `${{ env.USERNAME }}.txt`"
+          content-filepath: ../git-chaos/.github/workflows/issue_temp.md
+          labels: 'solo-practice, task-1'
+          assignees: ${{ env.USERNAME }}
